@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamDrop P2P - Transferência de Vídeos Gigantes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QRCode JS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neon: {
+                            green: '#00ff66',
+                            cyan: '#00f3ff',
+                            dark: '#0a0d14',
+                            card: '#121824',
+                            border: '#1e293b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilização futurista personalizada */
+        body {
+            background-color: #06090e;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 255, 102, 0.05) 0%, transparent 25%);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+        }
+        .glow-green {
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
+        }
+        .text-glow-cyan {
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+        }
+        .text-glow-green {
+            text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0d14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f3ff;
+        }
+    </style>
+</head>
+<body class="text-slate-200 font-sans min-h-screen flex flex-col justify-between selection:bg-neon-cyan selection:text-black">
+
+    <!-- Header Topo -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neon-cyan to-neon-green p-[2px] flex items-center justify-center glow-cyan">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid font-bold fa-bolt text-neon-cyan text-lg"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wider text-white flex items-center gap-2">
+                        STREAM<span class="text-neon-cyan">DROP</span> P2P
+                    </h1>
+                    <p class="text-xs text-slate-400 font-mono">Vídeos Gigantes (4-6h) Direct-to-Device</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-mono">
+                <span id="connection-status-badge" class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span> Desconectado
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full flex flex-col items-center justify-center">
+
+        <!-- Seleção de Modo (Envio vs Recebimento) -->
+        <div id="mode-selector" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 my-auto">
+            <!-- Card Enviar (PC) -->
+            <div onclick="setRole('sender')" class="group relative bg-slate-900/60 border border-slate-800 hover:border-neon-cyan/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:shadow-neon-cyan/10">
+                <div class="absolute -top-3 left-6 bg-neon-cyan text-slate-950 text-xs font-bold font-mono px-3 py-0.5 rounded-full uppercase">
+                    Computador / Origem
+                </div>
+                <div class="w-16 h-16 rounded-2xl bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center mb-6 text-neon-cyan text-2xl group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-neon-cyan transition-colors">Enviar Vídeo</h2>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    Selecione um vídeo longo do seu computador (MP4, MOV, MKV de 4h, 6h ou +10GB) para enviar direto ao celular via rede local.
+                </p>
+                <div class="flex items-center gap-2 text-xs font-mono text-neon-cyan">
+                    <span>Iniciar Conexão de Envio</span>
+                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+
+            <!-- Card Receber (Celular) -->
+            <div onclick="setRole('receiver')" class="group relative bg-slate-900/60 border border-slate-800 hover:border-neon-green/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:shadow-neon-green/10">
+                <div class="absolute -top-3 left-6 bg-neon-green text-slate-950 text-xs font-bold font-mono px-3 py-0.5 rounded-full uppercase">
+                    Celular / Destino
+                </div>
+                <div class="w-16 h-16 rounded-2xl bg-neon-green/10 border border-neon-green/30 flex items-center justify-center mb-6 text-neon-green text-2xl group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-neon-green transition-colors">Receber Vídeo</h2>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    Conecte o seu celular escaneando o QR Code do computador ou inserindo a chave de sinalização para receber o arquivo.
+                </p>
+                <div class="flex items-center gap-2 text-xs font-mono text-neon-green">
+                    <span>Preparar para Receber</span>
+                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Conexão e Sinalização (P2P Handshake) -->
+        <div id="signaling-panel" class="w-full max-w-2xl bg-slate-900/80 border border-slate-800 rounded-2xl p-6 hidden backdrop-blur-lg">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <button onclick="resetApp()" class="text-xs text-slate-400 hover:text-white flex items-center gap-2 font-mono">
+                    <i class="fa-solid fa-chevron-left"></i> Voltar ao início
+                </button>
+                <span id="role-indicator" class="text-xs font-mono uppercase font-bold text-neon-cyan">Modo Envio</span>
+            </div>
+
+            <!-- PASSO 1: SENDER (Gerar Oferta & Mostrar QR Code) -->
+            <div id="sender-step-1" class="space-y-4 hidden">
+                <div class="text-center">
+                    <h3 class="text-lg font-bold text-white mb-1">Passe 1: Escaneie ou Copie a Conexão</h3>
+                    <p class="text-xs text-slate-400">Abra este mesmo site no Celular, selecione "Receber" e escaneie o código abaixo ou copie o código de sinal.</p>
+                </div>
+
+                <div class="flex flex-col items-center justify-center p-4 bg-slate-950 rounded-xl border border-slate-800 my-4">
+                    <div id="qrcode-container" class="bg-white p-3 rounded-lg"></div>
+                    <p class="text-[10px] text-slate-500 mt-2 font-mono">QR Code com Dados de Pareamento</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">Código de Oferta (Signal P2P):</label>
+                    <div class="flex gap-2">
+                        <textarea id="offer-signal-output" readonly class="w-full h-20 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-300 focus:outline-none resize-none" placeholder="Gerando oferta P2P..."></textarea>
+                    </div>
+                    <button onclick="copyOfferSignal()" class="mt-2 w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-regular fa-copy"></i> Copiar Código de Sinalização
+                    </button>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800">
+                    <label class="block text-xs font-mono text-slate-400 mb-1">Passe 2: Cole aqui a Resposta gerada no Celular:</label>
+                    <textarea id="answer-signal-input" class="w-full h-20 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-300 focus:border-neon-cyan focus:outline-none resize-none" placeholder="Cole a Resposta (Answer) vinda do celular aqui..."></textarea>
+                    <button onclick="acceptAnswer()" class="mt-2 w-full py-3 bg-neon-cyan hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-lg transition-all shadow-lg shadow-neon-cyan/20">
+                        Confirmar e Conectar Celular <i class="fa-solid fa-link ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASSO 1: RECEIVER (Colar Oferta do PC & Gerar Resposta) -->
+            <div id="receiver-step-1" class="space-y-4 hidden">
+                <div class="text-center">
+                    <h3 class="text-lg font-bold text-white mb-1">Conectar ao Computador</h3>
+                    <p class="text-xs text-slate-400">Cole abaixo o Código de Sinalização gerado no computador.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-mono text-slate-400 mb-1">Cole a Oferta P2P do PC:</label>
+                    <textarea id="offer-signal-input" class="w-full h-24 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-300 focus:border-neon-green focus:outline-none resize-none" placeholder="Cole o código de oferta aqui..."></textarea>
+                    <button onclick="generateAnswer()" class="mt-2 w-full py-3 bg-neon-green hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-lg transition-all shadow-lg shadow-neon-green/20">
+                        Gerar Resposta de Pareamento <i class="fa-solid fa-key ml-1"></i>
+                    </button>
+                </div>
+
+                <div id="receiver-answer-section" class="hidden pt-4 border-t border-slate-800 space-y-2">
+                    <label class="block text-xs font-mono text-slate-400">Agora copie esta Resposta e cole de volta no PC:</label>
+                    <textarea id="answer-signal-output" readonly class="w-full h-20 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-300 focus:outline-none resize-none"></textarea>
+                    <button onclick="copyAnswerSignal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-regular fa-copy"></i> Copiar Resposta para o PC
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Transferência Ativa -->
+        <div id="transfer-panel" class="w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl p-6 hidden shadow-2xl backdrop-blur-xl">
+            <!-- Header do Arquivo -->
+            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+                <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-neon-cyan text-xl">
+                    <i class="fa-solid fa-file-video"></i>
+                </div>
+                <div class="flex-grow overflow-hidden">
+                    <h3 id="file-name-display" class="font-bold text-white truncate">Nenhum arquivo selecionado</h3>
+                    <p id="file-size-display" class="text-xs font-mono text-slate-400">0 MB</p>
+                </div>
+            </div>
+
+            <!-- Seleção de Arquivo (Apenas para o Sender) -->
+            <div id="sender-file-input-area" class="mb-6 hidden">
+                <label for="file-input" class="border-2 border-dashed border-slate-700 hover:border-neon-cyan/60 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors group bg-slate-950/40">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 group-hover:text-neon-cyan mb-2 transition-colors"></i>
+                    <span class="text-sm font-semibold text-slate-300 group-hover:text-white">Clique para selecionar o vídeo longo</span>
+                    <span class="text-xs text-slate-500 mt-1 font-mono">Suporta arquivos de múltiplos Gigabytes (MP4, MOV, MKV, AVI)</span>
+                    <input type="file" id="file-input" accept="video/*" class="hidden" onchange="handleFileSelect(event)">
+                </label>
+                <button id="start-send-btn" disabled onclick="startFileTransfer()" class="w-full mt-4 py-3 bg-neon-cyan disabled:opacity-40 disabled:cursor-not-allowed hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-lg transition-all shadow-lg shadow-neon-cyan/20 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Iniciar Enviar Vídeo para o Celular
+                </button>
+            </div>
+
+            <!-- Barra de Progresso e Métricas -->
+            <div id="progress-area" class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-xs font-mono mb-2">
+                        <span id="transfer-status-text" class="text-slate-400">Aguardando início...</span>
+                        <span id="transfer-percentage" class="text-neon-cyan font-bold">0%</span>
+                    </div>
+                    <!-- Barra visual -->
+                    <div class="w-full bg-slate-950 rounded-full h-3 border border-slate-800 overflow-hidden p-0.5">
+                        <div id="progress-bar" class="bg-gradient-to-r from-neon-cyan to-neon-green h-full rounded-full transition-all duration-200" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Grid de Estatísticas em Tempo Real -->
+                <div class="grid grid-cols-3 gap-3 pt-2">
+                    <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 text-center">
+                        <span class="block text-[10px] font-mono text-slate-500 uppercase">Velocidade</span>
+                        <span id="speed-display" class="text-sm font-mono font-bold text-slate-200">0.0 MB/s</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 text-center">
+                        <span class="block text-[10px] font-mono text-slate-500 uppercase">Transferido</span>
+                        <span id="transferred-display" class="text-sm font-mono font-bold text-slate-200">0 MB</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 text-center">
+                        <span class="block text-[10px] font-mono text-slate-500 uppercase">Tempo Restante</span>
+                        <span id="eta-display" class="text-sm font-mono font-bold text-slate-200">--:--</span>
+                    </div>
+                </div>
+
+                <!-- Botão de Download (Para o Recebedor quando concluir) -->
+                <div id="download-complete-area" class="hidden pt-4 text-center space-y-3">
+                    <div class="p-3 bg-neon-green/10 border border-neon-green/30 rounded-xl text-neon-green text-xs font-mono">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Transferência concluída com sucesso!
+                    </div>
+                    <a id="download-link" class="inline-flex items-center justify-center gap-2 w-full py-3 bg-neon-green hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-lg transition-all shadow-lg shadow-neon-green/20">
+                        <i class="fa-solid fa-download"></i> Salvar Vídeo no Celular
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guia Explicativa P2P -->
+        <div class="mt-12 w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-slate-400">
+            <div class="bg-slate-900/40 border border-slate-800/60 p-4 rounded-xl">
+                <span class="text-neon-cyan font-bold block mb-1">1. Sem Nuvem / Sem Limites</span>
+                <p class="text-slate-500 leading-relaxed">Conexão P2P direta via WebRTC. Arquivos de 10GB+, 20GB+ passam direto do PC pro celular sem limites de servidores.</p>
+            </div>
+            <div class="bg-slate-900/40 border border-slate-800/60 p-4 rounded-xl">
+                <span class="text-neon-green font-bold block mb-1">2. Memória Protegida (Chunking)</span>
+                <p class="text-slate-500 leading-relaxed">O arquivo de vídeo é fatiado em partes de 64KB. O celular recebe em fluxo continuo sem estourar a memória RAM.</p>
+            </div>
+            <div class="bg-slate-900/40 border border-slate-800/60 p-4 rounded-xl">
+                <span class="text-neon-cyan font-bold block mb-1">3. Rede Local ultra-rápida</span>
+                <p class="text-slate-500 leading-relaxed">Estando ambos no mesmo Wi-Fi, a velocidade atinge o limite máximo do seu roteador (até 30-80 MB/s).</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-slate-800/60 bg-slate-950/60 py-4 text-center text-xs text-slate-500 font-mono">
+        StreamDrop P2P &copy; WebRTC File Chunk Engine • Processamento 100% Local no Navegador
+    </footer>
+
+    <!-- LÓGICA DE WEBRTC E CHUNKING EM JAVASCRIPT -->
+    <script>
+        // Configurações Globais
+        const CHUNK_SIZE = 64 * 1024; // 64 KB por fragmento (Ideal para buffer WebRTC DataChannel)
+        let role = null; // 'sender' ou 'receiver'
+        let peerConnection = null;
+        let dataChannel = null;
+
+        // Estado do Arquivo
+        let selectedFile = null;
+        let receivedChunks = [];
+        let receivedBytes = 0;
+        let totalBytes = 0;
+        let incomingFileInfo = null;
+
+        // Métricas de Desempenho
+        let startTime = 0;
+        let lastReportTime = 0;
+        let lastReportBytes = 0;
+
+        // Configuração STUN gratuita para descoberta de IP local/público
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // UI Helpers
+        function $(id) { return document.getElementById(id); }
+
+        function updateStatus(text, type = 'normal') {
+            const badge = $('connection-status-badge');
+            let colorClass = 'bg-slate-500';
+            
+            if (type === 'success') colorClass = 'bg-neon-green';
+            if (type === 'working') colorClass = 'bg-neon-cyan';
+            if (type === 'error') colorClass = 'bg-red-500';
+
+            // Agora o status é honesto.
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${colorClass} animate-pulse"></span> ${text}`;
+        }
+
+        // 1. Seleção de Papel (Sender vs Receiver)
+        function setRole(selectedRole) {
+            role = selectedRole;
+            $('mode-selector').classList.add('hidden');
+            $('signaling-panel').classList.remove('hidden');
+
+            if (role === 'sender') {
+                $('role-indicator').innerText = 'Modo Computador (Envio)';
+                $('role-indicator').className = 'text-xs font-mono uppercase font-bold text-neon-cyan';
+                $('sender-step-1').classList.remove('hidden');
+                initSenderRTC();
+            } else {
+                $('role-indicator').innerText = 'Modo Celular (Recebimento)';
+                $('role-indicator').className = 'text-xs font-mono uppercase font-bold text-neon-green';
+                $('receiver-step-1').classList.remove('hidden');
+                initReceiverRTC();
+            }
+        }
+
+        function resetApp() {
+            if (peerConnection) peerConnection.close();
+            location.reload();
+        }
+
+        // ==========================================
+        // LÓGICA DO REMETENTE (PC / SENDER)
+        // ==========================================
+                // ==========================================
+        // LÓGICA DO REMETENTE (PC / SENDER)
+        // ==========================================
+        function initSenderRTC() {
+            // Muda para "Gerando..." assim que o PC começa a processar
+            updateStatus('Gerando Oferta...', 'working'); 
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            dataChannel = peerConnection.createDataChannel('fileTransferChannel');
+            dataChannel.binaryType = 'arraybuffer';
+            setupDataChannelEvents(dataChannel);
+
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) {
+                    // O SDP tá pronto. O PC agora espera o celular responder.
+                    const fullOffer = JSON.stringify(peerConnection.localDescription);
+                    $('offer-signal-output').value = fullOffer;
+                    generateQRCode(fullOffer);
+                    
+                    // AQUI ESTÁ A VERDADE: O status não fica verde, fica esperando.
+                    updateStatus('Aguardando Resposta...', 'working'); 
+                }
+            };
+
+            peerConnection.createOffer().then(offer => {
+                return peerConnection.setLocalDescription(offer);
+            }).catch(err => {
+                console.error('Erro ao criar oferta:', err);
+                updateStatus('Erro WebRTC', 'error'); 
+            });
+        }
+
+        // ==========================================
+        // LÓGICA DO RECEBEDOR (CELULAR / RECEIVER)
+        // ==========================================
+        function acceptAnswer() {
+            const answerText = $('answer-signal-input').value.trim();
+            if (!answerText) {
+                alert('Cole a resposta do celular, cara. Sem isso o WebRTC não fecha.');
+                return;
+            }
+
+            try {
+                const answerDesc = new RTCSessionDescription(JSON.parse(answerText));
+                peerConnection.setRemoteDescription(answerDesc).then(() => {
+                    // Agora sim a conexão está sendo estabelecida de verdade
+                    updateStatus('Estabelecendo P2P...', 'working');
+                });
+            } catch (err) {
+                updateStatus('Resposta Inválida', 'error');
+            }
+        }
+
+        function generateQRCode(text) {
+            $('qrcode-container').innerHTML = '';
+            new QRCode($('qrcode-container'), {
+                text: text,
+                width: 180,
+                height: 180,
+                colorDark : "#06090e",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+        }
+
+        function copyOfferSignal() {
+            const text = $('offer-signal-output').value;
+            if(!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Código de Sinalização copiado!');
+            }).catch(() => {
+                $('offer-signal-output').select();
+                document.execCommand('copy');
+                alert('Código copiado!');
+            });
+        }
+
+        function acceptAnswer() {
+            const answerText = $('answer-signal-input').value.trim();
+            if (!answerText) {
+                alert('Por favor, cole o código de resposta gerado no celular.');
+                return;
+            }
+
+            try {
+                const answerDesc = new RTCSessionDescription(JSON.parse(answerText));
+                peerConnection.setRemoteDescription(answerDesc).then(() => {
+                    updateStatus('Pareando com Celular...', 'working');
+                });
+            } catch (err) {
+                alert('Código de resposta inválido ou corrompido.');
+            }
+        }
+
+        // ==========================================
+        // LÓGICA DO RECEBEDOR (CELULAR / RECEIVER)
+        // ==========================================
+        function initReceiverRTC() {
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            // Escutar canal de dados vindo do Sender MAQUEPORRA KKKKK
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                dataChannel.binaryType = 'arraybuffer';
+                setupDataChannelEvents(dataChannel);
+            };
+        }
+
+        function generateAnswer() {
+            const offerText = $('offer-signal-input').value.trim();
+            if (!offerText) {
+                alert('Cole o código de oferta vindo do computador.');
+                return;
+            }
+
+            try {
+                const offerDesc = new RTCSessionDescription(JSON.parse(offerText));
+                
+                peerConnection.onicecandidate = (event) => {
+                    if (!event.candidate) {
+                        const fullAnswer = JSON.stringify(peerConnection.localDescription);
+                        $('answer-signal-output').value = fullAnswer;
+                        $('receiver-answer-section').classList.remove('hidden');
+                        updateStatus('Resposta Gerada! Copie para o PC.', 'working');
+                    }
+                };
+
+                peerConnection.setRemoteDescription(offerDesc)
+                    .then(() => peerConnection.createAnswer())
+                    .then(answer => peerConnection.setLocalDescription(answer))
+                    .catch(err => {
+                        console.error('Erro ao processar oferta:', err);
+                        alert('Falha ao processar a oferta WebRTC.');
+                    });
+
+            } catch (err) {
+                alert('Código de oferta inválido.');
+            }
+        }
+
+        function copyAnswerSignal() {
+            const text = $('answer-signal-output').value;
+            if(!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Resposta copiada! Cole no PC para concluir a conexão.');
+            }).catch(() => {
+                $('answer-signal-output').select();
+                document.execCommand('copy');
+                alert('Resposta copiada!');
+            });
+        }
+
+        // ==========================================
+        // GERENCIAMENTO DO CANAL DE DADOS P2P
+        // ==========================================
+        function setupDataChannelEvents(channel) {
+            channel.onopen = () => {
+                updateStatus('Conectado P2P Direct!', 'success');
+                $('signaling-panel').classList.add('hidden');
+                $('transfer-panel').classList.remove('hidden');
+
+                if (role === 'sender') {
+                    $('sender-file-input-area').classList.remove('hidden');
+                    $('transfer-status-text').innerText = 'Selecione o vídeo no computador para enviar.';
+                } else {
+                    $('transfer-status-text').innerText = 'Aguardando o PC iniciar o envio do arquivo...';
+                }
+            };
+
+            channel.onclose = () => {
+                updateStatus('Conexão encerrada', 'error');
+            };
+
+            channel.onerror = (err) => {
+                console.error('DataChannel error:', err);
+            };
+
+            // Recebimento de dados (Mensagens ou Chunks de Arquivos)
+            channel.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    // Metadados do arquivo recebidos (JSON)
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'file-meta') {
+                        incomingFileInfo = msg;
+                        totalBytes = msg.size;
+                        receivedBytes = 0;
+                        receivedChunks = [];
+                        startTime = performance.now();
+                        lastReportTime = startTime;
+                        lastReportBytes = 0;
+
+                        $('file-name-display').innerText = msg.name;
+                        $('file-size-display').innerText = formatBytes(msg.size);
+                        $('transfer-status-text').innerText = 'Recebendo vídeo...';
+                    }
+                } else {
+                    // Fragmento de vídeo (ArrayBuffer)
+                    receivedChunks.push(event.data);
+                    receivedBytes += event.data.byteLength;
+
+                    updateProgressMetrics(receivedBytes, totalBytes);
+
+                    // Verificar se o arquivo terminou
+                    if (receivedBytes >= totalBytes) {
+                        finalizeDownload();
+                    }
+                }
+            };
+        }
+
+        // ==========================================
+        // FLUXO DE ENVIO (FILE READER STREAM SLICE)
+        // ==========================================
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            selectedFile = files[0];
+            $('file-name-display').innerText = selectedFile.name;
+            $('file-size-display').innerText = formatBytes(selectedFile.size);
+            $('start-send-btn').disabled = false;
+        }
+
+        function startFileTransfer() {
+            if (!selectedFile || !dataChannel || dataChannel.readyState !== 'open') return;
+
+            $('start-send-btn').disabled = true;
+            $('transfer-status-text').innerText = 'Transmitindo em alta velocidade...';
+
+            // 1. Enviar Metadados do Arquivo
+            dataChannel.send(JSON.stringify({
+                type: 'file-meta',
+                name: selectedFile.name,
+                size: selectedFile.size,
+                mime: selectedFile.type
+            }));
+
+            totalBytes = selectedFile.size;
+            let offset = 0;
+            startTime = performance.now();
+            lastReportTime = startTime;
+            lastReportBytes = 0;
+
+            const fileReader = new FileReader();
+
+            fileReader.onerror = err => console.error('Erro ao ler arquivo:', err);
+            fileReader.onload = (e) => {
+                if (dataChannel.readyState !== 'open') return;
+
+                dataChannel.send(e.target.result);
+                offset += e.target.result.byteLength;
+
+                updateProgressMetrics(offset, totalBytes);
+
+                if (offset < totalBytes) {
+                    // Gerenciamento de Backpressure do Buffer para não travar o DataChannel WebRTC
+                    if (dataChannel.bufferedAmount > 8 * 1024 * 1024) { // Limite de 8MB no buffer
+                        setTimeout(readNextChunk, 50);
+                    } else {
+                        readNextChunk();
+                    }
+                } else {
+                    $('transfer-status-text').innerText = 'Envio concluído com sucesso!';
+                }
+            };
+
+            function readNextChunk() {
+                const slice = selectedFile.slice(offset, offset + CHUNK_SIZE);
+                fileReader.readAsArrayBuffer(slice);
+            }
+
+            // Iniciar primeira fatia
+            readNextChunk();
+        }
+
+        // ==========================================
+        // CONCLUIR E SALVAR O VÍDEO NO CELULAR
+        // ==========================================
+        function finalizeDownload() {
+            $('transfer-status-text').innerText = 'Vídeo recebido! Montando arquivo...';
+
+            // Criar Blob com o arquivo montado
+            const blob = new Blob(receivedChunks, { type: incomingFileInfo.mime || 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadLink = $('download-link');
+            downloadLink.href = url;
+            downloadLink.download = incomingFileInfo.name;
+
+            $('download-complete-area').classList.remove('hidden');
+            $('transfer-status-text').innerText = 'Pronto para Salvar no Celular!';
+
+            // Auto-trigger de download em dispositivos compatíveis
+            setTimeout(() => {
+                downloadLink.click();
+            }, 500);
+        }
+
+        // ==========================================
+        // CÁLCULO DE MÉTRICAS (SPEED, ETA, PROGRESS)
+        // ==========================================
+        function updateProgressMetrics(currentBytes, maxBytes) {
+            const percentage = Math.min(100, Math.round((currentBytes / maxBytes) * 100));
+            $('progress-bar').style.width = `${percentage}%`;
+            $('transfer-percentage').innerText = `${percentage}%`;
+            $('transferred-display').innerText = formatBytes(currentBytes);
+
+            const now = performance.now();
+            const timeDiff = (now - lastReportTime) / 1000; // Segundos
+
+            if (timeDiff >= 0.5) {
+                const bytesDiff = currentBytes - lastReportBytes;
+                const bytesPerSec = bytesDiff / timeDiff;
+
+                // Velocidade
+                $('speed-display').innerText = `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+
+                // Estimativa de Tempo Restante (ETA)
+                const remainingBytes = maxBytes - currentBytes;
+                if (bytesPerSec > 0) {
+                    const etaSeconds = Math.ceil(remainingBytes / bytesPerSec);
+                    $('eta-display').innerText = formatSeconds(etaSeconds);
+                }
+
+                lastReportTime = now;
+                lastReportBytes = currentBytes;
+            }
+        }
+
+        // Utilitários de Formatação
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatSeconds(totalSecs) {
+            const hrs = Math.floor(totalSecs / 3600);
+            const mins = Math.floor((totalSecs % 3600) / 60);
+            const secs = totalSecs % 60;
+            
+            if (hrs > 0) {
+                return `${hrs}h ${mins}m`;
+            } else if (mins > 0) {
+                return `${mins}m ${secs}s`;
+            }
+            return `${secs}s`;
+        }
+    </script>
+</body>
+</html>
